@@ -23,8 +23,8 @@ function getAttendanceByDate(date) {
 }
 
 
-function getInitials(firstName, lastName) {
-  return (firstName.charAt(0) + lastName.charAt(0)).toUpperCase();
+function getInitials(prenom, nom) {
+  return (prenom.charAt(0) + nom.charAt(0)).toUpperCase();
 }
 
 
@@ -195,7 +195,7 @@ function createDetailSection(formattedDate, title, recordList, students, colorCl
   recordList.forEach(record => {
     const student = students.find(s => s.id === record.studentId);
     if (student) {
-      const initials = getInitials(student.firstName, student.lastName);
+      const initials = getInitials(student.prenom, student.nom);
       const avatarColor = getRandomColor();
       
       let badgeContent = statusText;
@@ -212,7 +212,7 @@ function createDetailSection(formattedDate, title, recordList, students, colorCl
               ${initials}
             </div>
             <div>
-              <div class="fw-semibold">${student.firstName} ${student.lastName}</div>
+              <div class="fw-semibold">${student.prenom} ${student.nom}</div>
               <small class="text-secondary">${student.group} · ID: #${String(student.id).padStart(3, '0')}</small>
             </div>
           </div>
@@ -260,8 +260,8 @@ function searchHistory(searchTerm) {
     return record.students.some(s => {
       const student = students.find(st => st.id === s.studentId);
       return student && 
-             (student.firstName.toLowerCase().includes(term) ||
-              student.lastName.toLowerCase().includes(term) ||
+             (student.prenom.toLowerCase().includes(term) ||
+              student.nom.toLowerCase().includes(term) ||
               student.group.toLowerCase().includes(term));
     });
   });

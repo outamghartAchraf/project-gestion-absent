@@ -29,8 +29,8 @@ function getAttendanceByDate(date) {
 }
 
 
-function getInitials(firstName, lastName) {
-  return (firstName.charAt(0) + lastName.charAt(0)).toUpperCase();
+function getInitials(prenom, nom) {
+  return (prenom.charAt(0) + nom.charAt(0)).toUpperCase();
 }
 
 
@@ -75,7 +75,7 @@ function renderPresenceList() {
     card.className = 'student-card';
     card.dataset.studentId = student.id;
     
-    const initials = getInitials(student.firstName, student.lastName);
+    const initials = getInitials(student.prenom, student.nom);
     const avatarColor = getRandomColor();
     
     card.innerHTML = `
@@ -85,7 +85,7 @@ function renderPresenceList() {
             ${initials}
           </div>
           <div>
-            <div class="fw-semibold">${student.firstName} ${student.lastName}</div>
+            <div class="fw-semibold">${student.prenom} ${student.nom}</div>
             <small class="text-secondary">${student.group} - ID #${String(student.id).padStart(3, '0')}</small>
           </div>
         </div>
@@ -210,7 +210,7 @@ function saveAttendanceRecord() {
     const activeButton = card.querySelector('.status-buttons button.active');
     
     if (!activeButton) {
-      showNotification(`Veuillez sélectionner un statut pour ${student.firstName} ${student.lastName}`, 'warning');
+      showNotification(`Veuillez sélectionner un statut pour ${student.prenom} ${student.nom}`, 'warning');
       hasError = true;
       return;
     }
@@ -229,7 +229,7 @@ function saveAttendanceRecord() {
       const reason = lateInfo?.querySelector('.late-reason').value;
       
       if (!arrivalTime || !reason) {
-        showNotification(`Veuillez remplir les informations de retard pour ${student.firstName} ${student.lastName}`, 'warning');
+        showNotification(`Veuillez remplir les informations de retard pour ${student.prenom} ${student.nom}`, 'warning');
         hasError = true;
         return;
       }

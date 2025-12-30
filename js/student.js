@@ -1,402 +1,207 @@
-
-const STORAGE_KEY = 'enaa_students';
-
-// Get all students from localStorage
-function getAllStudents() {
-  const data = localStorage.getItem(STORAGE_KEY);
-  return data ? JSON.parse(data) : [];
+function getStudents(){
+    return JSON.parse(localStorage.getItem("enaa_students")) || []
 }
-
-// Save students to localStorage
-function saveStudents(students) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(students));
+function setStudents(students){
+    localStorage.setItem("enaa_students",JSON.stringify(students))
 }
 
 
-
-// ============================================
-// CRUD OPERATIONS
-// ============================================
-
-// Add new student
-function addStudent(studentData) {
-  const students = getAllStudents();
-  const newId = students.length > 0 ? Math.max(...students.map(s => s.id)) + 1 : 1;
+function saveStudent(){
+    const students = getStudents()
+    const date = new Date()
+    const creationDate = `${date.getDate()}-${date.getMonth()+1}-${date.getFullYear()}-${date.getHours()}:${date.getMinutes().toString().padStart(2, "0")}`
   
-  const newStudent = {
-    id: newId,
-    firstName: studentData.firstName.trim(),
-    lastName: studentData.lastName.trim(),
-    email: studentData.email.trim(),
-    group: studentData.group,
-    status: studentData.status
-  };
-  
-  students.push(newStudent);
-  saveStudents(students);
-  return newStudent;
+    const nomInput = document.getElementById("nomInput")
+    const prenomInput = document.getElementById("prenomInput")
+    const emailInput = document.getElementById("emailInput")
+    const groupInput = document.getElementById("groupSelect")
+    const statutInput = document.getElementById("statutSelect")
+
+    let newId = students.length > 0 ? students[students.length - 1].id + 1 : 1;
+    let studentObj = {id:newId,nom: nomInput.value,prenom:prenomInput.value,email:emailInput.value,group: groupInput.value,status:statutInput.value,dateInscription:creationDate}
+    students.push(studentObj)
+
+    setStudents(students)
+    showMessage(`Etudiant "${nomInput.value} ${prenomInput.value}" ajouter avec succes!`, 5000);
+    fillList()
 }
 
-// Update existing student
-function updateStudent(id, studentData) {
-  const students = getAllStudents();
-  const index = students.findIndex(s => s.id === parseInt(id));
-  
-  if (index !== -1) {
-    students[index] = {
-      id: parseInt(id),
-      firstName: studentData.firstName.trim(),
-      lastName: studentData.lastName.trim(),
-      email: studentData.email.trim(),
-      group: studentData.group,
-      status: studentData.status
-    };
-    saveStudents(students);
-    return true;
-  }
-  return false;
+function fillList(){
+    const list = document.querySelector("#studentsTable tbody")
+    list.innerHTML = ""
+    const students = getStudents()
+    for(student of students){
+        const tr = document.createElement("tr")
+
+        const badge = student.status === "Active" ? "bg-success" : "bg-danger";
+        const studentid = student.id;
+        tr.innerHTML = `<td>${student.nom}</td>
+                        <td>${student.prenom}</td>
+                        <td>${student.email}</td>
+                        <td>${student.group}</td>
+                        <td><span class="badge ${badge}">${student.status}</span></td>
+                        <td><button onClick="showStudentInfos(${studentid})" class="btn btn-link p-0 text-white" data-bs-toggle="modal" data-bs-target="#showStudentInfos"><i class="bi bi-eye"></i></button> 
+                        <button onClick= "editStudent(${studentid})" class="btn btn-link p-0 text-white" data-bs-toggle="modal" data-bs-target="#editStudentModal"><i class="bi bi-pencil-square"></i></button> 
+                        <button onClick= "deleteStudent(${studentid})" class="btn btn-link p-0 text-white"><i class="bi bi-trash"></i></button> 
+                        </td>`
+        list.appendChild(tr)
+    }
 }
 
-// Delete student
-function deleteStudent(id) {
-  let students = getAllStudents();
-  students = students.filter(s => s.id !== parseInt(id));
-  saveStudents(students);
-  updateStatistics();
-  renderStudentTable();
+
+function statistics(){
+const students = getStudents()
+const totalStudents = document.querySelector("#totalEtudiants h3")
+totalStudents.innerHTML = `${students.length} <i class="bi bi-people-fill"></i>`
+
+const etudiantsActif = document.querySelector("#etudiantsActif h3")
+const etudiantsInactif = document.querySelector("#etudiantsInactif h3")
+let activesum = 0
+let inactivesum = 0
+for(student of students){
+    if(student.status === "Active"){
+        activesum++;
+    }else if(student.status === "Inactive"){
+        inactivesum++;
+    }
+}
+etudiantsActif.innerHTML = `${activesum} <i class="bi bi-person-check">`
+etudiantsInactif.innerHTML = `${inactivesum} <i class="bi bi-person-exclamation"></i>`
 }
 
-// Get student by ID
-function getStudentById(id) {
-  const students = getAllStudents();
-  return students.find(s => s.id === parseInt(id));
-}
 
-// ============================================
-// UI RENDERING
-// ============================================
+function deleteStudent(studentId){
+    const confirmed = confirm(`are you sure you want to delete this student ?`)
+    if(!confirmed) return;
 
-// Get initials from name
-function getInitials(firstName, lastName) {
-  return (firstName.charAt(0) + lastName.charAt(0)).toUpperCase();
-}
-
-// Get random color for avatar
-function getRandomColor() {
-  const colors = ['#0d6efd', '#dc3545', '#ffc107', '#198754', '#0dcaf0', '#6f42c1', '#d63384'];
-  return colors[Math.floor(Math.random() * colors.length)];
-}
-
-// Render student table
-function renderStudentTable(studentsToRender = null) {
-  const students = studentsToRender || getAllStudents();
-  const tbody = document.querySelector('tbody');
-  
-  if (!tbody) return;
-  
-  tbody.innerHTML = '';
-  
-  students.forEach(student => {
-    const tr = document.createElement('tr');
-    const avatarColor = getRandomColor();
-    const initials = getInitials(student.firstName, student.lastName);
-    const statusBadge = student.status === 'Active' ? 'bg-success' : 'bg-danger';
+    const students = getStudents()
+    const index = students.findIndex(item => item.id === studentId);
     
-    tr.innerHTML = `
-      <td>
-        <div class="d-flex align-items-center gap-2">
-          <div class="rounded-circle d-flex justify-content-center align-items-center flex-shrink-0"
-               style="width:35px;height:35px; font-size: 0.875rem; background:${avatarColor}; color: white;">
-            ${initials}
-          </div>
-          <div>
-            <div class="fw-bold" style="font-size: 0.9rem;">${student.firstName} ${student.lastName}</div>
-            <small class="d-md-none text-white-50">${student.email}</small>
-          </div>
-        </div>
-      </td>
-      <td class="align-middle hide-mobile">${student.email}</td>
-      <td class="align-middle">${student.group}</td>
-      <td class="align-middle">
-        <span class="badge ${statusBadge}">${student.status}</span>
-      </td>
-      <td class="align-middle">
-        <i class="fas fa-eye me-2" style="cursor: pointer;" onclick="viewStudent(${student.id})" title="Voir"></i>
-        <i class="fas fa-edit me-2" style="cursor: pointer;" onclick="editStudent(${student.id})" title="Modifier"></i>
-        <i class="fas fa-trash" style="cursor: pointer;" onclick="confirmDeleteStudent(${student.id})" title="Supprimer"></i>
-      </td>
-    `;
+    students.splice(index,1);
+    setStudents(students)
+    fillList()
+}
+
+function editStudent(studentId) {
+ 
+const students = getStudents()
+let student = students.find(item => item.id === studentId)
+    document.getElementById("editNom").value = student.nom
+    document.getElementById("editPrenom").value = student.prenom
+    document.getElementById("editEmail").value = student.email
+    document.getElementById("editGroup").value = student.group
+    document.getElementById("editStatut").value = student.status
+
+    const savebtn = document.getElementById("saveUpdatedStudent")
+    savebtn.dataset.studentId = student.id
     
-    tbody.appendChild(tr);
+}
+
+function saveEditedStudent(){
+    const savebtn = document.getElementById("saveUpdatedStudent")
+    const studentId = parseInt(savebtn.dataset.studentId)
+
+    const students = getStudents()
+    const index = students.findIndex(item => item.id === studentId);
+
+        students[index].nom = document.getElementById("editNom").value;
+        students[index].prenom = document.getElementById("editPrenom").value;
+        students[index].email = document.getElementById("editEmail").value;
+        students[index].group = document.getElementById("editGroup").value;
+        students[index].status = document.getElementById("editStatut").value;
+
+    setStudents(students)   
+    showMessage(`Etudiant "${students[index].nom} ${students[index].prenom}" modifier avec succes!`, 5000);
+    fillList()
+}
+
+
+
+    
+    addEventListener("keydown", function(event){
+        const search = document.getElementById("recherche")
+        const students = getStudents()
+        if(event.key === "Enter"){
+            let word = search.value;    
+            const student = students.filter(item => item.nom.toLowerCase().includes(word.toLowerCase()) || 
+                                        item.prenom.toLowerCase().includes(word.toLowerCase()))
+            console.log(student)
+        if(student.length > 0){
+            const list = document.querySelector("#studentsTable tbody")
+        list.innerHTML = ""
+            for(st of student){
+        const tr = document.createElement("tr")
+
+        const badge = st.status === "Active" ? "bg-success" : "bg-danger";
+        const studentid = st.id;
+        tr.innerHTML = `<td>${st.nom}</td>
+                        <td>${st.prenom}</td>
+                        <td>${st.email}</td>
+                        <td>${st.group}</td>
+                        <td><span class="badge ${badge}">${st.status}</span></td>
+                        <td><button onClick="showStudentInfos(${studentid})" class="btn btn-link p-0" data-bs-toggle="modal" data-bs-target="#showStudentInfos"><i class="bi bi-eye"></i></button> 
+                        <button onClick= "editStudent(${studentid})" class="btn btn-link p-0" data-bs-toggle="modal" data-bs-target="#editStudentModal"><i class="bi bi-pencil-square"></i></button> 
+                        <button onClick= "deleteStudent(${studentid})" class="btn btn-link p-0"><i class="bi bi-trash"></i></button> 
+                        </td>`
+        list.appendChild(tr)
+            }
+
+    } else if(student.length == 0){showMessage("Pas d'etudiant trouvé", 5000)}
+        }
+    })
+
+
+
+function showStudentInfos(studentid){
+    const students = getStudents()
+    let student = students.find(item => item.id === studentid)
+    document.getElementById("showNom").textContent = `Nom: ${student.nom}`
+    document.getElementById("showPrenom").textContent = `Prénom: ${student.prenom}`
+    document.getElementById("showEmail").textContent = `Email: ${student.email}`
+    document.getElementById("showGroup").textContent = `Group: ${student.group}`
+    document.getElementById("showStatus").textContent = `Statut: ${student.status}`
+    document.getElementById("showDate").textContent = `Date d'inscription: ${student.dateInscription}`
+}
+
+function showMessage(text, duration = 5000) {
+    const msg = document.getElementById("message");
+    msg.textContent = text;
+    msg.style.display = "block";
+    msg.style.opacity = 1;
+
+    setTimeout(() => {
+        msg.style.opacity = 0;
+        setTimeout(() => { msg.style.display = "none"; }, 300); // wait for fade-out
+    }, duration);
+}
+
+//  7. SIDEBAR TOGGLE (BEGINNER FRIENDLY)
+//  *************************************************
+
+document.addEventListener("DOMContentLoaded", function () {
+
+  let toggleBtn = document.getElementById("sidebarToggle");
+  let sidebar = document.querySelector(".sidebar");
+
+  if (!toggleBtn || !sidebar) return;
+
+  toggleBtn.addEventListener("click", function (event) {
+    event.stopPropagation();
+    sidebar.classList.toggle("show");
   });
-}
 
-// Update statistics
-function updateStatistics() {
-  const students = getAllStudents();
-  const total = students.length;
-  const active = students.filter(s => s.status === 'Active').length;
-  const inactive = students.filter(s => s.status === 'Inactive').length;
-  
-  // Update stats cards
-  const totalEl = document.querySelector('.stats-card:nth-child(1) h2');
-  const activeEl = document.querySelector('.stats-card:nth-child(2) h2');
-  const inactiveEl = document.querySelector('.stats-card:nth-child(3) h2');
-  
-  if (totalEl) totalEl.textContent = total;
-  if (activeEl) activeEl.textContent = active;
-  if (inactiveEl) inactiveEl.textContent = inactive;
-}
-
-// ============================================
-// MODAL OPERATIONS
-// ============================================
-
-let currentEditId = null;
-
-// Show add student modal
-function showAddModal() {
-  currentEditId = null;
-  document.querySelector('#addStudentModal .modal-title').innerHTML = 
-    '<i class="fas fa-user-plus me-2"></i> Ajouter un étudiant';
-  
-  // Clear form
-  document.querySelector('input[placeholder="Nom"]').value = '';
-  document.querySelector('input[placeholder="Prénom"]').value = '';
-  document.querySelector('input[type="email"]').value = '';
-  document.querySelector('select').selectedIndex = 0;
-  document.querySelectorAll('select')[1].selectedIndex = 0;
-  
-  const modal = new bootstrap.Modal(document.getElementById('addStudentModal'));
-  modal.show();
-}
-
-// View student details
-function viewStudent(id) {
-  const student = getStudentById(id);
-  if (!student) return;
-  
-  alert(`
-Détails de l'étudiant:
-━━━━━━━━━━━━━━━━━━━━
-Nom: ${student.lastName}
-Prénom: ${student.firstName}
-Email: ${student.email}
-Groupe: ${student.group}
-Statut: ${student.status}
-  `);
-}
-
-// Edit student
-function editStudent(id) {
-  const student = getStudentById(id);
-  if (!student) return;
-  
-  currentEditId = id;
-  
-  // Update modal title
-  document.querySelector('#addStudentModal .modal-title').innerHTML = 
-    '<i class="fas fa-user-edit me-2"></i> Modifier un étudiant';
-  
-  // Fill form with student data
-  const inputs = document.querySelectorAll('#addStudentModal input');
-  inputs[0].value = student.lastName;
-  inputs[1].value = student.firstName;
-  inputs[2].value = student.email;
-  
-  const selects = document.querySelectorAll('#addStudentModal select');
-  selects[0].value = student.group;
-  selects[1].value = student.status;
-  
-  const modal = new bootstrap.Modal(document.getElementById('addStudentModal'));
-  modal.show();
-}
-
-// Confirm delete
-function confirmDeleteStudent(id) {
-  const student = getStudentById(id);
-  if (!student) return;
-  
-  if (confirm(`Êtes-vous sûr de vouloir supprimer ${student.firstName} ${student.lastName} ?`)) {
-    deleteStudent(id);
-    showNotification('Étudiant supprimé avec succès', 'success');
-  }
-}
-
-// Save student (add or update)
-function saveStudentData() {
-  const inputs = document.querySelectorAll('#addStudentModal input');
-  const selects = document.querySelectorAll('#addStudentModal select');
-  
-  const lastName = inputs[0].value.trim();
-  const firstName = inputs[1].value.trim();
-  const email = inputs[2].value.trim();
-  const group = selects[0].value;
-  const status = selects[1].value;
-  
-  // Validation
-  if (!lastName || !firstName || !email || !group || !status) {
-    alert('Veuillez remplir tous les champs');
-    return;
-  }
-  
-  // Email validation
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    alert('Veuillez entrer un email valide');
-    return;
-  }
-  
-  const studentData = {
-    lastName,
-    firstName,
-    email,
-    group,
-    status
-  };
-  
-  if (currentEditId) {
-    // Update existing student
-    updateStudent(currentEditId, studentData);
-    showNotification('Étudiant modifié avec succès', 'success');
-  } else {
-    // Add new student
-    addStudent(studentData);
-    showNotification('Étudiant ajouté avec succès', 'success');
-  }
-  
-  // Close modal
-  const modal = bootstrap.Modal.getInstance(document.getElementById('addStudentModal'));
-  modal.hide();
-  
-  // Refresh table and stats
-  updateStatistics();
-  renderStudentTable();
-}
-
-// ============================================
-// SEARCH FUNCTIONALITY
-// ============================================
-
-function searchStudents(searchTerm) {
-  const students = getAllStudents();
-  const term = searchTerm.toLowerCase().trim();
-  
-  if (!term) {
-    renderStudentTable();
-    return;
-  }
-  
-  const filtered = students.filter(student => {
-    return (
-      student.firstName.toLowerCase().includes(term) ||
-      student.lastName.toLowerCase().includes(term) ||
-      student.email.toLowerCase().includes(term) ||
-      student.group.toLowerCase().includes(term) ||
-      student.status.toLowerCase().includes(term)
-    );
+  document.addEventListener("click", function (event) {
+    if (
+      window.innerWidth <= 768 &&
+      !sidebar.contains(event.target) &&
+      !toggleBtn.contains(event.target)
+    ) {
+      sidebar.classList.remove("show");
+    }
   });
-  
-  renderStudentTable(filtered);
-}
-
-// ============================================
-// NOTIFICATION SYSTEM
-// ============================================
-
-function showNotification(message, type = 'success') {
-  // Create notification element
-  const notification = document.createElement('div');
-  notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
-  notification.style.cssText = 'top: 80px; right: 20px; z-index: 9999; min-width: 300px;';
-  notification.innerHTML = `
-    ${message}
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-  `;
-  
-  document.body.appendChild(notification);
-  
-  // Auto remove after 3 seconds
-  setTimeout(() => {
-    notification.classList.remove('show');
-    setTimeout(() => notification.remove(), 150);
-  }, 3000);
-}
-
-// ============================================
-// EVENT LISTENERS
-// ============================================
-
-document.addEventListener('DOMContentLoaded', function() {
-  // Initialize data
-  //initializeData();
-  
-  // Render initial table and stats
-  updateStatistics();
-  renderStudentTable();
-  
-  // Search functionality
-  const searchInput = document.querySelector('input[placeholder="Rechercher..."]');
-  if (searchInput) {
-    searchInput.addEventListener('input', (e) => {
-      searchStudents(e.target.value);
-    });
-  }
-  
-  // Add student button in modal
-  const saveButton = document.querySelector('#addStudentModal .btn-success');
-  if (saveButton) {
-    saveButton.addEventListener('click', saveStudentData);
-  }
-  
-  // Handle Enter key in form
-  const modalInputs = document.querySelectorAll('#addStudentModal input, #addStudentModal select');
-  modalInputs.forEach(input => {
-    input.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        saveStudentData();
-      }
-    });
-  });
-  
-  // Reset form when modal is closed
-  const modal = document.getElementById('addStudentModal');
-  if (modal) {
-    modal.addEventListener('hidden.bs.modal', function() {
-      currentEditId = null;
-      document.querySelector('#addStudentModal .modal-title').innerHTML = 
-        '<i class="fas fa-user-plus me-2"></i> Ajouter un étudiant';
-    });
-  }
 });
 
-// ============================================
-// MOBILE MENU TOGGLE
-// ============================================
-
-const menuToggle = document.getElementById('menuToggle');
-const sidebar = document.getElementById('sidebar');
-const sidebarOverlay = document.getElementById('sidebarOverlay');
-
-if (menuToggle && sidebar && sidebarOverlay) {
-  menuToggle.addEventListener('click', function() {
-    sidebar.classList.toggle('show');
-    sidebarOverlay.classList.toggle('show');
-  });
-
-  sidebarOverlay.addEventListener('click', function() {
-    sidebar.classList.remove('show');
-    sidebarOverlay.classList.remove('show');
-  });
-
-  // Close sidebar when clicking on a nav link (mobile)
-  document.querySelectorAll('.sidebar .nav-link').forEach(link => {
-    link.addEventListener('click', function() {
-      if (window.innerWidth < 992) {
-        sidebar.classList.remove('show');
-        sidebarOverlay.classList.remove('show');
-      }
-    });
-  });
-}
+document.addEventListener("DOMContentLoaded", () => {
+    statistics()
+    fillList()
+})
